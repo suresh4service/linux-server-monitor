@@ -1,0 +1,161 @@
+#!/usr/bin/python3
+
+'''
+Created on 2016-12-23
+
+@author: chris
+'''
+
+log_file = '/home/chris/linux-server-monitor/'
+
+cpu_temp = {'temp_cpu1': '/sys/class/hwmon/hwmon3/temp1_',
+            'temp_cpu1_core0': '/sys/class/hwmon/hwmon3/temp2_',
+            'temp_cpu1_core1': '/sys/class/hwmon/hwmon3/temp3_',
+            'temp_cpu1_core2': '/sys/class/hwmon/hwmon3/temp4_',
+            'temp_cpu1_core3': '/sys/class/hwmon/hwmon3/temp5_'}
+
+version = '0.0.1'
+
+import platform
+import getpass
+import os
+import datetime
+import subprocess
+import psutil
+import uptime
+
+from collections import OrderedDict
+
+# third party
+import lsm_speedtest
+
+
+
+
+# check if sudo
+#if os.getuid() != 0:
+#    exit('You must run this script as sudo.')
+
+
+
+
+
+
+
+
+gb = lambda bytes: bytes / 1024 / 1024 / 1024
+
+print('\nLinux Server Monitor\n')
+
+print('Collecting data, this may take a few minutes...\n')
+
+# todo give all numeric values more sensible precision
+
+# ------------------------------------------------------------------------
+
+
+
+# system info
+log_data = {'system_hardware': platform.machine(),
+               'system_machine_name': platform.node(),
+               'system_operating_system': platform.platform(),
+               'system_processor': platform.processor(),
+               'system_current_user': getpass.getuser(),
+               'system_python_build': platform.python_build(),
+               'system_python_compiler': platform.python_compiler(),
+               'system_python_implementation': platform.python_implementation(),
+               'system_python_version': platform.python_version(),
+               'system_system_release': platform.release(),
+               'system_system alias': platform.system_alias(platform.system(), platform.release(), platform.version()),
+               'system_system_version': platform.version()}
+
+log_data['linux_system_monitor_version'] = version
+
+# memory check
+f = open('/proc/meminfo', 'r')
+meminfo = dict((i.split()[0].rstrip(':'), int(i.split()[1])) for i in f.readlines())
+f.close()
+log_data['memory_total_gb'] = meminfo['MemTotal']/1024/1024
+log_data['memory_free_gb'] = meminfo['MemFree']/1024/1024
+log_data['memory_available_gb'] = meminfo['MemAvailable']/1024/1024
+
+# CPU usage
+log_data['cpu_percent'] = psutil.cpu_percent()
+
+# CPU temperature
+cpu_temp_suffix = ['crit','crit_alarm','input','label','max']
+for k,v in cpu_temp.items():
+    for suffix in cpu_temp_suffix:
+        new_key = k + '_' + suffix
+        file = v + suffix
+        cat = lambda f: open(f, 'r').read().strip()
+        try:
+            # todo fix this
+            log_data[new_key + '_deg_c'] = cat(file)
+        except Exception as e:
+            print(str(e))
+            exit
+
+# TODO server cab (and case?) temperature/humidity using USB thermometer
+
+# swap usage
+log_data['swap_memory_total_gb'] = gb(psutil.swap_memory().total)
+log_data['swap_memory_free_gb'] = gb(psutil.swap_memory().free)
+log_data['swap_memory_used_gb'] = gb(psutil.swap_memory().used)
+
+# load average
+log_data['load_average0'] = os.getloadavg()[0]
+log_data['load_average1'] = os.getloadavg()[1]
+log_data['load_average2'] = os.getloadavg()[2]
+
+# disk usage
+# todo allow monitoring of more than one volume
+log_data['disk_usage_total_gb'] = gb(psutil.disk_usage('/').total)
+log_data['disk_usage_used_gb'] = gb(psutil.disk_usage('/').used)
+log_data['disk_usage_free_gb'] = gb(psutil.disk_usage('/').free)
+
+# uptime
+log_data['boot_uptime_days'] = uptime.uptime()/60/60/24
+log_data['boot_last'] = uptime.boottime()
+
+# antivirus
+# todo just want a parsable date from this
+cp = subprocess.run(["clamscan","--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+stdout = cp.stdout
+log_data['antivirus_last_update'] = str(stdout.decode()).strip()
+
+
+# bandwidth test
+try:
+    results = lsm_speedtest.shell()
+    log_data['speedtest_ping'] = results.ping
+    log_data['speedtest_server_host'] = results.server['host']
+    log_data['speedtest_server_long'] = results.server['lon']
+    log_data['speedtest_server_url1'] = results.server['url']
+    if 'url2' in results.server:
+        log_data['speedtest_server_url2'] = results.server['url2']
+    else:
+        log_data['speedtest_server_url2'] = ''
+    log_data['speedtest_server_distance'] = results.server['d']
+    log_data['speedtest_server_lat'] = results.server['lat']
+    log_data['speedtest_server_id'] = results.server['id']
+    log_data['speedtest_server_country'] = results.server['country']
+    log_data['speedtest_server_country_code'] = results.server['cc']
+    log_data['speedtest_server_sponsor'] = results.server['sponsor']
+    log_data['speedtest_server_latency'] = results.server['latency']
+    log_data['speedtest_server_name'] = results.server['name']
+    log_data['speedtest_timestamp'] = results.timestamp
+    log_data['speedtest_speed_dowmload'] = results.download
+    log_data['speedtest__speed_upload'] = results.upload
+except Exception as e:
+    exit('Error collecting speedtest results: ' + str(e))
+
+
+sorted_log_data = OrderedDict(sorted(log_data.items(), key=lambda t: t[0]))
+
+print('\n------------------------------------------------------------------')
+print('RESULTS')
+print('------------------------------------------------------------------\n')
+for k,v in sorted_log_data.items():
+    print(k,'=',v)
+print('------------------------------------------------------------------\n')
