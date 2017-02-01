@@ -6,7 +6,7 @@ Created on 2016-12-23
 @author: chris
 '''
 
-log_file = '/home/chris/linux-server-monitor/'
+log_dir = '/home/chris/linux-server-monitor/'
 
 cpu_temp = {'temp_cpu1': '/sys/class/hwmon/hwmon3/temp1_',
             'temp_cpu1_core0': '/sys/class/hwmon/hwmon3/temp2_',
@@ -19,7 +19,7 @@ version = '0.0.1'
 import platform
 import getpass
 import os
-import datetime
+from pathlib import Path
 import subprocess
 import psutil
 import uptime
@@ -28,19 +28,6 @@ from collections import OrderedDict
 
 # third party
 import lsm_speedtest
-
-
-
-
-# check if sudo
-#if os.getuid() != 0:
-#    exit('You must run this script as sudo.')
-
-
-
-
-
-
 
 
 gb = lambda bytes: bytes / 1024 / 1024 / 1024
@@ -152,6 +139,7 @@ except Exception as e:
 
 
 sorted_log_data = OrderedDict(sorted(log_data.items(), key=lambda t: t[0]))
+del log_data
 
 print('\n------------------------------------------------------------------')
 print('RESULTS')
@@ -159,3 +147,13 @@ print('------------------------------------------------------------------\n')
 for k,v in sorted_log_data.items():
     print(k,'=',v)
 print('------------------------------------------------------------------\n')
+
+lsm_log = log_dir + 'lsm_log.csv'
+
+import csv
+
+with open(lsm_log, 'a') as csvfile:
+    fieldnames = sorted_log_data.keys()
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerow(sorted_log_data)
