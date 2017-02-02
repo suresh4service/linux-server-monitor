@@ -6,7 +6,11 @@ Created on 2016-12-23
 @author: chris
 '''
 
-log_dir = '/home/chris/linux-server-monitor/'
+# ------------------------------------------------------------------
+
+# CONFIG
+
+log_dir = '/home/chris/linux-server-monitor-dev/'
 
 cpu_temp = {'temp_cpu1': '/sys/class/hwmon/hwmon3/temp1_',
             'temp_cpu1_core0': '/sys/class/hwmon/hwmon3/temp2_',
@@ -14,21 +18,20 @@ cpu_temp = {'temp_cpu1': '/sys/class/hwmon/hwmon3/temp1_',
             'temp_cpu1_core2': '/sys/class/hwmon/hwmon3/temp4_',
             'temp_cpu1_core3': '/sys/class/hwmon/hwmon3/temp5_'}
 
-version = '0.0.1'
+# ------------------------------------------------------------------
 
+import csv
 import platform
 import getpass
 import os
-from pathlib import Path
 import subprocess
 import psutil
 import uptime
-
 from collections import OrderedDict
-
-# third party
 import lsm_speedtest
+from datetime import datetime
 
+version = '0.0.1'
 
 gb = lambda bytes: bytes / 1024 / 1024 / 1024
 
@@ -37,10 +40,6 @@ print('\nLinux Server Monitor\n')
 print('Collecting data, this may take a few minutes...\n')
 
 # todo give all numeric values more sensible precision
-
-# ------------------------------------------------------------------------
-
-
 
 # system info
 log_data = {'system_hardware': platform.machine(),
@@ -111,11 +110,10 @@ cp = subprocess.run(["clamscan","--version"], stdout=subprocess.PIPE, stderr=sub
 stdout = cp.stdout
 log_data['antivirus_last_update'] = str(stdout.decode()).strip()
 
-
 # bandwidth test
 try:
     results = lsm_speedtest.shell()
-    log_data['speedtest_ping'] = results.ping
+    log_data['speedtest_ping_ms'] = results.ping
     log_data['speedtest_server_host'] = results.server['host']
     log_data['speedtest_server_long'] = results.server['lon']
     log_data['speedtest_server_url1'] = results.server['url']
@@ -132,14 +130,16 @@ try:
     log_data['speedtest_server_latency'] = results.server['latency']
     log_data['speedtest_server_name'] = results.server['name']
     log_data['speedtest_timestamp'] = results.timestamp
-    log_data['speedtest_speed_dowmload'] = results.download
-    log_data['speedtest__speed_upload'] = results.upload
+    log_data['speedtest_speed_dowmload_mbps'] = results.download/1024/1024
+    log_data['speedtest_speed_upload_mbps'] = results.upload/1024/1024
 except Exception as e:
     exit('Error collecting speedtest results: ' + str(e))
 
-
 sorted_log_data = OrderedDict(sorted(log_data.items(), key=lambda t: t[0]))
 del log_data
+
+sorted_log_data['timestamp']=datetime.utcnow()
+sorted_log_data.move_to_end('timestamp', last=False)
 
 print('\n------------------------------------------------------------------')
 print('RESULTS')
@@ -150,10 +150,19 @@ print('------------------------------------------------------------------\n')
 
 lsm_log = log_dir + 'lsm_log.csv'
 
-import csv
+if not os.path.isdir(log_dir):
+    os.makedirs(log_dir)
+
+#todo rotate logs at a user-defined interval
+
+#todo enable writing logs to database
+
+exists = False
+if os.path.isfile(lsm_log): exists = True
 
 with open(lsm_log, 'a') as csvfile:
     fieldnames = sorted_log_data.keys()
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    writer.writeheader()
+    if not exists:
+        writer.writeheader()
     writer.writerow(sorted_log_data)

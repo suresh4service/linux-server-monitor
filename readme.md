@@ -1,7 +1,5 @@
 #Linux Server Monitor
 
-[![Join the chat at https://gitter.im/linux-server-monitor/Lobby](https://badges.gitter.im/linux-server-monitor/Lobby.svg)](https://gitter.im/linux-server-monitor/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 This is a lightweight monitoring tool for Linux servers.
 
 https://github.com/chris-brown-nz/linux-server-monitor
@@ -52,7 +50,7 @@ Linux Server Monitor is most useful when scheduled to run regularly.
 
 #Contact/Support
 
-You can contact me with general comments and enquiries via: https://gitter.im/linux-server-monitor/Lobby
+You can contact me with general comments and enquiries via: https://gitter.im/linux-server-monitor/linux-server-monitor
 
 Please log any change requests or bugs at: https://github.com/chris-brown-nz/linux-server-monitor/issues
 
@@ -60,7 +58,7 @@ Please log any change requests or bugs at: https://github.com/chris-brown-nz/lin
 
 Date | Version | Description
 ---- | ------- | -----------
-2017-02-01 | 0.0.1 | Initial release. Tested with Python 3.5, Ubuntu 16.04 64-bit desktop.
+2017-02-02 | 0.0.1 | Initial release. Tested with Python 3.5, Ubuntu 16.04 64-bit desktop.
 
 
 
