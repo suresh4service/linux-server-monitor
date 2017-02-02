@@ -54,6 +54,8 @@ You can contact me with general comments and enquiries via: https://gitter.im/li
 
 Please log any change requests or bugs at: https://github.com/chris-brown-nz/linux-server-monitor/issues
 
+This is the Trello board for the project: https://trello.com/b/x1IB0GSo/linux-server-monitor
+
 #Changelog
 
 Date | Version | Description
